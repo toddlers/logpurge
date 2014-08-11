@@ -1,0 +1,39 @@
+AWS_ACCESS_KEY: 'AKIAIN4A4SHXQ'
+AWS_SECRET_ACCESS_KEY: 'ALO5UUvZsSvbDn9kTqAGn9Z'
+filegroup1:
+    path: '/mnt/ephemeral/jetty/logs/'
+    files: "server.log.*"
+    dateregex: '(\d{4}-\d{2}-\d{2})'
+    upto: "1 days ago"
+    action:
+        - s3
+        - delete
+    bucket: 'logs_testing'
+
+filegroup2:
+    path: '/mnt/ephemeral/jetty/logs/'
+    files: "activity.log.*"
+    dateregex: '(\d{4}-\d{2}-\d{2})'
+    upto: "1 days ago"
+    action:
+        - s3
+        - delete
+    bucket: 'logs_testing'
+
+filegroup4:
+    path: '/mnt/ephemeral/logs/'
+    files: "*.stderrout.log"
+    dateregex: '(\d{4}_\d{2}_\d{2})'
+    upto: "1 days ago"
+    action:
+        - delete
+
+filegroup5:
+    path: '/mnt/ephemeral/logs/'
+    files: "*.stderrout.log"
+    dateregex: '(\d{4}_\d{2}_\d{2})'
+    upto: "1 days ago"
+    action:
+        - move
+        - delete
+    dest: "/tmp/"
