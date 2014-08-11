@@ -13,7 +13,6 @@ import httplib2
 import json
 import logging
 import boto
-import pprint
 import shutil
 
 
@@ -183,7 +182,6 @@ def getOldFiles(files,dateregex,maxage):
 
 
 def main():
-    logging.basicConfig(format="logpurge.py: %(message)s")
     now = time.strftime('%Y%m%d-%H%M%S')
     opts = GetOptions()
     if not opts.config:
