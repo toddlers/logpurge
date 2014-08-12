@@ -13,6 +13,7 @@ import httplib2
 import json
 import logging
 import boto
+import pprint
 import shutil
 
 
@@ -24,7 +25,7 @@ class GetOptions:
         parser.add_option("--cfg",action="store",default="config.yaml",
                 dest="config",type="string",help="read options from config file")
         parser.add_option("--list",action="store_true",
-                dest="list",default=False,help="list all sections")
+                dest="flist",default=False,help="list all sections")
         parser.add_option("--only",action="store",
                 dest="only",type="string",help="only process the specified section from the file")
         self.parser = parser
@@ -130,7 +131,7 @@ def uploadToS3(access,secret,bucket,iid,sourceFiles):
             logger.error("S3 Error with permission on %s:%s: %s",
                     bucket,key_name,reason)
     else:
-        print "Nothing to upload"
+        logger.info("Nothing to upload")
 
 
 def deleteOldFiles(filesToDelete):
@@ -145,7 +146,7 @@ def deleteOldFiles(filesToDelete):
             except OSError as why:
                 errors.extend((f,str(why)))
     else:
-        print "Nothing to delete !"
+        logger.info("Nothing to delete !")
     if errors:
         for error in errors:
             logger.error(error)
@@ -162,7 +163,7 @@ def moveOldFiles(filesToMove,destination):
         except OSError as why:
             errors.extend((src,dst,str(why)))
     else:
-        print "Nothing to move !"
+        logger.info("Nothing to move !")
     if errors:
         for error in errors:
             logger.error(error)
@@ -181,11 +182,45 @@ def getOldFiles(files,dateregex,maxage):
     return oldfiles
 
 
+def processFilegroup(fgroups,fgroup,instanceId,flist):
+    access_key = fgroups['AWS_ACCESS_KEY']
+    secret_key = fgroups['AWS_SECRET_ACCESS_KEY']
+    if isinstance(fgroups[fgroup],dict):
+        if not re.search("AWS",fgroup):
+            logger.info("Processing the file group %s",fgroup)
+        maxage = fgroups[fgroup]["upto"].split(" ")[0]
+        fpath = fgroups[fgroup]["path"]
+        dateregex = fgroups[fgroup]["dateregex"]
+        filepat = fgroups[fgroup]["files"]
+        files = glob.glob(fpath + '/' + filepat)
+        oldFiles = getOldFiles(files,dateregex,maxage)
+        actions = fgroups[fgroup]["action"]
+        if flist:
+            return oldFiles
+        else:
+            for action in actions:
+                if action.lower() == "s3":
+                    bucket = fgroups[fgroup]["bucket"]
+                    try:
+                        uploadToS3(access_key,secret_key,bucket,instanceId,oldFiles)
+                    except IOError as (errnotrerror):
+                        logger.error("Error uploading files to %s : %s",bucket, error)
+                elif action.lower() == "delete":
+                    deleteOldFiles(oldFiles)
+                elif action.lower() == "move":
+                    moveDest = fgroups[fgroup]["dest"]
+                    moveOldFiles(oldFiles,moveDest)
+                else:
+                    logger.error("Action specified (%s) is not the valid action" %(action))
+
+
+
 def main():
+    logging.basicConfig(format="logpurge.py: %(message)s")
     now = time.strftime('%Y%m%d-%H%M%S')
     opts = GetOptions()
     if not opts.config:
-        print "Need configuration file"
+        logger.error("Need configuration file")
         opts.print_help_exit()
     try:
         filegroups = getConf(opts.config)
@@ -219,30 +254,26 @@ def main():
     except:
         logger.error("S3 unknown error, quitting")
         sys.exit(2)
-    for filegroup in filegroups:
-        if isinstance(filegroups[filegroup],dict):
-            logger.info("Processing the file group %s", filegroup)
-            maxage = filegroups[filegroup]["upto"].split(" ")[0]
-            fpath = filegroups[filegroup]["path"]
-            dateregex = filegroups[filegroup]["dateregex"]
-            filepat = filegroups[filegroup]["files"]
-            files = glob.glob(fpath + '/' + filepat)
-            processedFiles = getOldFiles(files,dateregex,maxage)
-            actions = filegroups[filegroup]["action"]
-            for action in actions:
-                if action.lower() == "s3" and isinstance(filegroups[filegroup],dict):
-                    bucket = filegroups[filegroup]["bucket"]
-                    try:
-                        uploadToS3(aws_access_key,aws_secret_key,bucket,instanceId,processedFiles)
-                    except IOError as (errno,strerror):
-                        logger.error("Error uploading files to %s : %s",bucket, error)
-                elif action.lower() == "delete" and isinstance(filegroups[filegroup],dict):
-                    deleteOldFiles(processedFiles)
-                elif action.lower() == "move" and isinstance(filegroups[filegroup],dict):
-                    moveDest = filegroups[filegroup]["dest"]
-                    moveOldFiles(processedFiles,moveDest)
-                else:
-                    print "Action specified (%s) is not the valid action" %(action)
+
+    if opts.flist:
+        for filegroup in filegroups:
+            processedFiles = processFilegroup(filegroups,filegroup,instanceId,opts.flist)
+            if processedFiles:
+                pprint.pprint(processedFiles)
+            else:
+                if not re.search("AWS",filegroup):
+                    logger.info("No files for action in %s", filegroup)
+
+        sys.exit(0)
+
+    if opts.only:
+        # get the filegroup name
+        filegroup = opts.only
+        processFilegroup(filegroups,filegroup,instanceId,opts.flist)
+    else:
+        # process all teh filegroups in the config
+        for filegroup in filegroups:
+            processFilegroup(filegroups,filegroup,instanceId,opts.flist)
 
 if __name__ == "__main__":
     logger = GetLogger().initialize_logger()
