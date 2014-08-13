@@ -56,9 +56,16 @@ filegroup2:
     dateregex: '(\d{4}-\d{2}-\d{2})'
     upto: "1 days ago"
     action:
-        - s3
+        - move
+    dest: "/tmp/"
+
+filegroup3:
+    path: '/mnt/ephemeral/jetty/logs/'
+    files: "*.start.log"
+    dateregex: '(\d{4}-\d{2}-\d{2})'
+    upto: "1 days ago"
+    action:
         - delete
-    bucket: 'logs_testing'
 
 ```
 
