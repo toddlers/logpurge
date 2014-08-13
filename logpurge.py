@@ -77,12 +77,13 @@ def getInstanceId():
     iid = match.group(1)
     return iid
 
-
+# load configuration from config file
 def getConf(filename):
     options = open(filename,'r')
     filegroups = yaml.load(options)
     return filegroups
 
+# create s3 connection
 def getConnection(access,secret):
     conn = boto.connect_s3(access,secret)
     return conn
@@ -111,9 +112,13 @@ def uploadToS3(access,secret,bucket,iid,sourceFiles):
     s3 = getConnection(access,secret)
     if sourceFiles:
         try:
+
+            # get bucket information
             b = s3.get_bucket(bucket)
             for sourceFile in sourceFiles:
+                # remove path information from filename
                 baseFileName = os.path.basename(sourceFile)
+                # create new key in s3 with bucket name appended
                 key_name = os.path.join(iid,baseFileName)
 
                 # Create a new object named sourceFile
@@ -149,11 +154,15 @@ def deleteOldFiles(filesToDelete):
         for error in errors:
             logger.error(error)
 
+
+
 def moveOldFiles(filesToMove,destination):
     errors = []
     if filesToMove:
         try:
             for f in filesToMove:
+                # used shutil instead of os.copy() because os.copy()
+                # will only copy not move
                 shutil.move(f,destination)
                 logger.info("Moved file : %s to %s",f,destination)
         except ( IOError,os.error) as why:
@@ -174,7 +183,12 @@ def getOldFiles(files,dateregex,maxage):
     for f in files:
         if re.search(dateregex,f):
             deltatime = datetime.now() - timedelta(days = int(maxage))
+
+            # get the last modified timestamp for file
+
             filemtime = datetime.fromtimestamp(path.getmtime(f))
+
+            # check the age of the file
             if filemtime < deltatime:
                 oldfiles.append(f)
     return oldfiles
@@ -184,8 +198,14 @@ def processFilegroup(fgroups,fgroup,instanceId,flist):
     access_key = fgroups['AWS_ACCESS_KEY']
     secret_key = fgroups['AWS_SECRET_ACCESS_KEY']
     if isinstance(fgroups[fgroup],dict):
+
+        # We dont need to append keys to logfile
+
         if not re.search("AWS",fgroup):
             logger.info("Processing the file group %s",fgroup)
+
+        # get the options for filegroup
+
         maxage = fgroups[fgroup]["upto"].split(" ")[0]
         fpath = fgroups[fgroup]["path"]
         dateregex = fgroups[fgroup]["dateregex"]
@@ -193,9 +213,12 @@ def processFilegroup(fgroups,fgroup,instanceId,flist):
         files = glob.glob(fpath + '/' + filepat)
         oldFiles = getOldFiles(files,dateregex,maxage)
         actions = fgroups[fgroup]["action"]
+
+        # if list option is set , return with file names for filegroup
         if flist:
             return oldFiles
         else:
+        # If list option is not set , execute actions
             for action in actions:
                 if action.lower() == "s3":
                     bucket = fgroups[fgroup]["bucket"]
@@ -214,7 +237,6 @@ def processFilegroup(fgroups,fgroup,instanceId,flist):
 
 
 def main():
-    logging.basicConfig(format="logpurge.py: %(message)s")
     now = time.strftime('%Y%m%d-%H%M%S')
     opts = GetOptions()
     if not opts.config:
@@ -228,14 +250,18 @@ def main():
         sys.exit(1)
 
     try:
+
+        # get the instnace ID for uploading to s3
         instanceId = getInstanceId()
     except:
         logger.error("Error getting EC2 instance id, quitting")
         sys.exit(1)
 
-    # testing s3 connection before doing anything
     aws_access_key = filegroups['AWS_ACCESS_KEY']
     aws_secret_key = filegroups['AWS_SECRET_ACCESS_KEY']
+
+    # testing s3 connection before doing anything
+
     try:
         testS3(aws_access_key,aws_secret_key,instanceId,now)
     except boto.exception.NoAuthHandlerFound:
@@ -253,6 +279,9 @@ def main():
         logger.error("S3 unknown error, quitting")
         sys.exit(2)
 
+
+    # Check if we only have to list the files
+
     if opts.flist:
         for filegroup in filegroups:
             processedFiles = processFilegroup(filegroups,filegroup,instanceId,opts.flist)
@@ -264,12 +293,14 @@ def main():
 
         sys.exit(0)
 
+
+    # Process only a specific filegroup
     if opts.only:
         # get the filegroup name
         filegroup = opts.only
         processFilegroup(filegroups,filegroup,instanceId,opts.flist)
     else:
-        # process all teh filegroups in the config
+        # process all the filegroups in the config
         for filegroup in filegroups:
             processFilegroup(filegroups,filegroup,instanceId,opts.flist)
 

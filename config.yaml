@@ -1,5 +1,11 @@
 AWS_ACCESS_KEY: 'AKIAIN4A4SHXQ'
 AWS_SECRET_ACCESS_KEY: 'ALO5UUvZsSvbDn9kTqAGn9Z'
+
+# upto params should be in "x days ago"
+# bucket name for s3 should be present before using here
+# no need to create the destination for move operation
+# it will be created
+#
 filegroup1:
     path: '/mnt/ephemeral/jetty/logs/'
     files: "server.log.*"
@@ -30,10 +36,9 @@ filegroup4:
 
 filegroup5:
     path: '/mnt/ephemeral/logs/'
-    files: "*.stderrout.log"
+    files: "*.start.log"
     dateregex: '(\d{4}_\d{2}_\d{2})'
     upto: "1 days ago"
     action:
         - move
-        - delete
     dest: "/tmp/"
