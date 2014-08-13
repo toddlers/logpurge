@@ -70,7 +70,7 @@ filegroup3:
 ```
 
 - Three types of actions are supported 
-  - S3 will upload your logs to the mentioned s3 bucket with structure are "bucket/instance_ID/logfilename"
+  - S3 will upload your logs to the mentioned s3 bucket with structure as "bucket/instance_ID/logfilename"
   - DELETE will delete the logs from the disk
   - MOVE will the log files to the mentioned destination. It will create the destination if doesn't exists
   
