@@ -1,4 +1,4 @@
-# GHRH
+# logpurge
 
 Manage logs on the servers easily. I have written this after fiddling with logrotate utility on linux boxes. 
 Some of the problems which I encountered with logorotate utility are :
