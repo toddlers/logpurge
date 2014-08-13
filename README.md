@@ -68,5 +68,5 @@ filegroup2:
   - MOVE will the log files to the mentioned destination. It will create the destination if doesn't exists
   
 - You need to provide the date regex which is in the log file e.g. 2014-03-12.start.log
-- Provide file glob . e.g. for file name 2014-03-12.start.log , glob will be *.start.log
+- Provide file glob . e.g. for file name 2014-03-12.start.log glob will be *.start.log
 - Age is specified by "upto". Specify the maxage like "x days ago"
