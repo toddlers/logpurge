@@ -20,8 +20,6 @@ import shutil
 class GetOptions:
     def __init__(self):
         parser = optparse.OptionParser()
-        parser.add_option("--simulate",action="store_true",
-                dest="simulate",default=False,help="Don't take action")
         parser.add_option("--cfg",action="store",default="config.yaml",
                 dest="config",type="string",help="read options from config file")
         parser.add_option("--list",action="store_true",
